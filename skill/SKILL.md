@@ -47,18 +47,24 @@ whatever data it needs by itself.
    These prefs are for this machine, not per workspace. Do not ask again
    on reconnect or a second repo. A new computer (empty prefs) asks/checks
    once.
-5. ALWAYS use the built-in in-app browser (iab) for every ChatGPT step.
-   Follow **In-app browser (ChatGPT)** below. NEVER Computer Use (no
-   screenshot-click). NEVER launch or control a third-party/external browser
-   (Chrome, Safari, Edge…), and never use `open <url>` to hand off to one.
-   - The ONLY exception: the user explicitly says the Cloudflare login must use
-     their own browser session — that single Cloudflare login step may go through
-     their browser; everything else stays in the built-in browser.
-   - If the user asks to run ChatGPT in their own browser, refuse politely and
-     explain: "Codex 需要持续调用 ChatGPT 和配置连接，这会频繁操作页面，可能影响
-     你浏览器的正常使用。ChatGPT 只能跑在内置浏览器里。" Only if the user replies
-     with an explicit "我愿意承担影响" may you proceed in their browser; otherwise
-     keep ChatGPT in the built-in browser, every time they ask.
+5. Prefer the built-in in-app browser (iab) for ChatGPT, but do not make it
+   a hard dependency. Follow **In-app browser (ChatGPT)** below for the normal
+   path. NEVER use screenshot-based Computer Use and never copy cookies, OAuth
+   tokens, localStorage, or session storage between browsers.
+   - If ChatGPT login or Google OAuth shows a visible, repeatable failure in iab
+     while the user confirms the same account can sign in successfully in their
+     normal Chrome/Edge browser, enter **External browser fallback (ChatGPT)**.
+     This is a browser-environment failure, not a C2C/connector failure: do not
+     restart the bridge or tunnel just because iab login failed.
+   - Prefer an available browser-control surface that uses the user's already
+     signed-in browser profile (for example the product's supported browser
+     extension/provider). Once selected, keep ALL ChatGPT setup and conversation
+     steps for this Codex session on that same browser surface; do not bounce
+     back to iab because the sessions are isolated.
+   - If no controllable external-browser surface is available, use **Guided
+     manual ChatGPT setup** in the user's normal browser. Ask for one action at
+     a time. Never ask the user to export, paste, or reveal browser cookies.
+   - The Cloudflare login may also use the user's own browser session when needed.
 6. Conversation reuse depends on `c2c session --json` → `conversation.mode`
    (see Conversation management). Do not invent a second mode.
    - **long-chat** (legacy session file, or the user opted out): ONE ChatGPT
@@ -76,8 +82,9 @@ whatever data it needs by itself.
    settings directory. Run `c2c sandbox-allow --json` (idempotent). If it fails
    with EPERM / Operation not permitted, request elevated permissions and retry
    ONCE. After `{ "alreadyAllowed": true }` or `{ "added": true }`, stay silent.
-8. ChatGPT pages: only the URLs in **In-app browser (ChatGPT)**. Never start
-   from chatgpt.com and click through menus.
+8. ChatGPT pages: use only the fixed URLs listed in **In-app browser
+   (ChatGPT)**, regardless of whether the active surface is iab or the approved
+   external-browser fallback. Never start from chatgpt.com and hunt through menus.
 9. **Doctor gate.** After `c2c doctor --json`, do not `goto` ChatGPT and do not
    send `[C2C]` until local is green — except the reconnect settings pages when
    `chatgptRepair.needed` is true. Not green:
@@ -176,6 +183,34 @@ that close the tab, hide the window, or stall on the settings page.
    A browser/js timeout is not failure. Claim the same tab, read the page, keep
    standby. If ChatGPT is still thinking, keep polling. Never open a second
    tab and never resend INIT/EXECUTED just because a wait timed out.
+
+## External browser fallback (ChatGPT)
+
+Use this only after a visible, repeatable iab login/OAuth failure where the
+user confirms that the same ChatGPT account works in their normal browser.
+
+1. Keep the current C2C state, `mcpUrl`, `workspaceName`, and
+   `connectorName`. Do not run `c2c setup` again and do not recreate the
+   tunnel just because iab authentication failed.
+2. If a supported controllable browser surface backed by the user's existing
+   Chrome/Edge profile is available, ask for explicit permission once, then use
+   that surface. Open the same fixed ChatGPT URLs from **In-app browser
+   (ChatGPT)**. Keep one ChatGPT tab and stay on that surface for the remainder
+   of this Codex session.
+3. Do not import/export cookies, copy browser profile directories, launch a
+   remote-debugging port, or read browser credential/session files.
+4. If the external browser cannot be controlled safely, switch to **Guided
+   manual ChatGPT setup**. The user performs the settings/login clicks in their
+   normal browser. Codex continues to own local C2C commands and only provides
+   the current connector values and one-time pairing code when the Authorize
+   form is ready.
+5. After manual setup, verify the connector from a ChatGPT conversation in that
+   same normal browser by asking it to call `workspace_info`. If browser
+   automation is unavailable, ask the user for only the resulting workspace
+   name/status — never ask them to paste tokens, cookies, or page storage.
+6. A successful external-browser login does NOT imply iab is repaired. Do not
+   switch back to iab until a later session explicitly verifies that iab can
+   sign in normally.
 
 ## Locations
 
@@ -277,8 +312,12 @@ Speak only of 临时地址 / 固定域名 / 登录 Cloudflare.
      `接下来用手动教学配置。一次只需要做一个操作。`
      Do not say 自动配置没有成功.
    - `setupMode: "auto"`: continue with step 5. Keep the two-failure fallback.
-5. Open ChatGPT on the ONE iab tab (see **In-app browser**). Foreground +
-   markHandoff immediately. Same tab, `goto` only:
+5. Open ChatGPT on the selected browser surface. Normally this is the ONE
+   iab tab (see **In-app browser**). If iab login/OAuth has a visible,
+   repeatable failure but the user's normal browser works, use **External
+   browser fallback (ChatGPT)** instead. Keep the selected surface for the
+   entire ChatGPT setup and verification flow. Foreground + markHandoff when
+   those capabilities exist. Same tab, fixed URLs only:
    - 开发人员模式: skip `https://chatgpt.com/#settings/Security` when
      `developerModeEnabled` is true. Otherwise open it, enable 开发人员模式
      ("Developer mode") if it is off, then `c2c prefs set --developer-mode`.
@@ -328,12 +367,14 @@ to do ("请登录 ChatGPT，完成后告诉我'好了'"), then continue.
 
 ### Guided manual ChatGPT setup
 
-Enter this path when `setupMode` is `manual` (chosen at the start), or when
+Enter this path when `setupMode` is `manual` (chosen at the start), when
 automatic ChatGPT browser configuration fails twice at the same explicit
-setup/reconnect step after `c2c doctor` / repair. Do NOT enter the failure
-path for a browser/js timeout without a visible error, a page that is
-still loading/generating, or while waiting for login / 2FA / CAPTCHA.
-A chosen manual path does not wait for those two failures.
+setup/reconnect step after `c2c doctor` / repair, OR immediately when iab
+shows a visible repeatable login/OAuth failure and the user confirms their
+normal browser can log in successfully. Do NOT treat a browser/js timeout
+without a visible error, a page that is still loading/generating, or normal
+waiting for login / 2FA / CAPTCHA as a failure. A chosen manual path or
+confirmed iab-auth fallback does not wait for two configuration failures.
 
 Stop automating ChatGPT settings. Keep the current local C2C state and the
 current `mcpUrl`, `pairingCode`, `workspaceName`, and `connectorName`. Do not
