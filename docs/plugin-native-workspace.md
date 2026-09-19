@@ -40,6 +40,18 @@ Raw tool output is not stored by the hook. Command summaries are bounded and
 credential-like values are redacted. Existing `c2c record` remains available
 only when Codex intentionally releases a sanitized test/build output body.
 
+## Install this branch as a Codex marketplace
+
+For this development branch:
+
+```bash
+codex plugin marketplace add wgtfee/codex-with-chatgpt --ref feature/codex-native-workspace-plugin
+```
+
+Then open `/plugins`, choose the **Codex with ChatGPT** marketplace entry,
+install the plugin, review/trust its hooks, and start a fresh Codex conversation
+inside the target repository.
+
 ## Local plugin test
 
 Build first so SessionStart can autostart the bridge:
