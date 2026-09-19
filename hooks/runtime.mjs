@@ -197,6 +197,7 @@ export function endSession(event, dataDir) {
 
 export function tryAutostartBridge(event, env = process.env) {
   if (env.C2C_NATIVE_AUTOSTART === "0") return { attempted: false, reason: "disabled" };
+  if (event.source === "compact") return { attempted: false, reason: "compact" };
   const pluginRoot = env.PLUGIN_ROOT || env.CLAUDE_PLUGIN_ROOT;
   const dataDir = pluginDataDir(env);
   if (!pluginRoot) return { attempted: false, reason: "missing-plugin-root" };
@@ -221,7 +222,7 @@ export function tryAutostartBridge(event, env = process.env) {
 export function buildSessionContext(event, dataDir, autostart) {
   const root = canonicalWorkspaceRoot(event.cwd);
   const pluginRoot = process.env.PLUGIN_ROOT || process.env.CLAUDE_PLUGIN_ROOT || "<plugin-root>";
-  const cli = 'C2C_STATE_DIR="' + dataDir + '" node "' + path.join(pluginRoot, "bin", "c2c.js") + '"';
+  const cli = 'node "' + path.join(pluginRoot, "scripts", "c2c-native.mjs") + '" --state-dir "' + dataDir + '"';
   const startState = autostart?.attempted ? (autostart.ok ? "local bridge is ready" : "local bridge autostart failed") : "local bridge autostart was skipped";
   return [
     "Codex with ChatGPT native-workspace plugin is active.",
