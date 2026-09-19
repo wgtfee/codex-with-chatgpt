@@ -169,6 +169,9 @@ describe("native Codex workspace plugin hooks", () => {
     const portable = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
     const compat = JSON.parse(fs.readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"));
     const hooks = JSON.parse(fs.readFileSync(path.join(root, "hooks", "hooks.json"), "utf8"));
+    const marketplace = JSON.parse(
+      fs.readFileSync(path.join(root, ".agents", "plugins", "marketplace.json"), "utf8")
+    );
 
     expect(portable.name).toBe("codex-with-chatgpt");
     expect(portable.skills).toBe("./skills/");
@@ -178,6 +181,10 @@ describe("native Codex workspace plugin hooks", () => {
     expect(hooks.hooks.SessionStart[0].hooks[0].command).toContain("${PLUGIN_ROOT}");
     expect(fs.existsSync(path.join(root, "hooks", "session-start.mjs"))).toBe(true);
     expect(fs.existsSync(path.join(root, "hooks", "post-tool-use.mjs"))).toBe(true);
+    expect(marketplace.plugins[0]).toMatchObject({
+      name: "codex-with-chatgpt",
+      source: { source: "local", path: "./" },
+    });
   });
 
   it("runs the Codex lifecycle end-to-end against the current cwd", () => {
