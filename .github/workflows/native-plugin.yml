@@ -31,10 +31,10 @@ jobs:
           mkdir -p "$PKG"
           cp -R .codex-plugin hooks skills dist bin scripts "$PKG/"
           cp plugin.json package.json pnpm-lock.yaml pnpm-workspace.yaml LICENSE README.md README.zh-CN.md "$PKG/"
-          corepack pnpm deploy --prod --legacy "$PKG/runtime"
-          rm -rf "$PKG/runtime/.codex-plugin" "$PKG/runtime/hooks" "$PKG/runtime/skills" "$PKG/runtime/tests" || true
-          cp -R "$PKG/runtime/node_modules" "$PKG/node_modules"
-          rm -rf "$PKG/runtime"
+          cp -R node_modules "$PKG/node_modules"
+          cd "$PKG"
+          corepack pnpm prune --prod
+          cd ..
           test -f "$PKG/dist/cli/index.js"
           test -f "$PKG/.codex-plugin/plugin.json"
           test -f "$PKG/hooks/hooks.json"
