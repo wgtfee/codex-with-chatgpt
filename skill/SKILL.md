@@ -100,7 +100,7 @@ whatever data it needs by itself.
      `chatgptRepair`. Wait and run doctor again.
    If doctor is already green and `chatgptRepair.needed` is false, do not
    `c2c restart`, do not start a second tunnel, and do not Delete the
-   connector. ChatGPT/IAB-only errors are not permission to churn the
+   connector. ChatGPT-browser-only errors are not permission to churn the
    public address.
    A ChatGPT-side 401 after a sent message is different: repair then, do not
    treat it as permission to skip this gate next time.
@@ -211,6 +211,11 @@ user confirms that the same ChatGPT account works in their normal browser.
 6. A successful external-browser login does NOT imply iab is repaired. Do not
    switch back to iab until a later session explicitly verifies that iab can
    sign in normally.
+7. For the rest of this Skill, phrases such as "same selected ChatGPT browser
+   tab" mean the surface chosen here. Reuse the one-tab, fixed-URL, Chat-mode,
+   and reply-waiting rules from **In-app browser (ChatGPT)** whenever the
+   external surface supports equivalent operations. If it does not, stay in
+   guided-manual mode rather than silently returning to iab.
 
 ## Locations
 
@@ -435,7 +440,7 @@ ONE ChatGPT conversation per workspace. Same as before.
   `--clear-checkpoint` on DONE). Do not put logs or diffs in those fields.
 - **Switch it** ONLY when (a) the user asks for a new chat, (b) the current
   chat visibly lags, or (c) this conversation is Work. Then:
-  1. Same iab tab: `goto` `https://chatgpt.com/`, confirm Chat mode
+  1. Same selected ChatGPT browser tab: `goto` `https://chatgpt.com/`, confirm Chat mode
      (**In-app browser** §7), then send the boot prompt.
   2. Send a HANDOFF (`docs/protocol.md`) — goal, progress, state, issues,
      next step. Never paste files.
@@ -487,7 +492,7 @@ then save the new chat URL. Keep `--project-url`.
 
 Do this for a new workspace, or when an existing user asks to switch to
 Project. Do **not** click the ChatGPT sidebar to create the Project
-(Computer Use is forbidden; IAB must not hunt that menu).
+(Computer Use is forbidden; the selected ChatGPT browser surface must not hunt that menu).
 
 1. Tell the user exactly this (fill in the workspace name):
 
@@ -499,7 +504,7 @@ Project. Do **not** click the ChatGPT sidebar to create the Project
 建好后会打开合集页面。看到页面后跟我说「好了」。
 ```
 
-2. Wait for「好了」/ the collection page. Same iab tab: read the address bar.
+2. Wait for「好了」/ the collection page. On the same selected ChatGPT browser tab, read the address bar.
    It must look like `https://chatgpt.com/g/g-p-…/project`. If it does not,
    ask them to open that project until it does. Then:
    `c2c session set -w <ws> --mode project --project-url <url> --connector-name "<connectorName>"`.
@@ -568,7 +573,7 @@ ChatGPT's replies are expected to be substantive (see step 3). Docs: `docs/proto
    reclaim**, then doctor again and only continue when the gate is green.
    Generate task id: `c2c_` + 4 random hex chars — unless a checkpoint already
    has one (reuse that id; do not mint a second task).
-1. `c2c session -w <workspace> --json`. Open ChatGPT on the same iab tab
+1. `c2c session -w <workspace> --json`. Open ChatGPT on the same selected browser tab
    per **Conversation management** for `conversation.mode` (foreground +
    markHandoff). long-chat: saved chat, or `https://chatgpt.com/` if none.
    project: this thread's chat URL, or the collection page for a new chat,
@@ -682,7 +687,7 @@ If status is restricted, ignore it and review from git_diff.
 ## Workflow: disconnect（"断开 ChatGPT"）
 
 1. `c2c unpair -w <workspace>` (revokes all tokens immediately).
-2. Optionally remove the connector on the same iab tab via
+2. Optionally remove the connector on the same selected ChatGPT browser tab via
    `https://chatgpt.com/plugins` (foreground + markHandoff). Only touch
    this workspace's `connectorName`.
 3. Tell the user: "已断开 ChatGPT 对该项目的访问。"
@@ -702,7 +707,7 @@ the previous public address is gone. Doctor already started a new one.
    follow-up doctor is green. Never "try a message first to see if it works".
    Reuse `c2c prefs --json`. Do not re-ask setup mode. If `setupMode` is
    `manual`, use **Guided manual ChatGPT setup** (chosen) instead of automating.
-2. Same one iab tab as setup (foreground + markHandoff). Settings URLs only
+2. Same one selected ChatGPT browser tab as setup (foreground + markHandoff when supported). Settings URLs only
    until Connected — never hunt menus:
    - 开发人员模式: skip `https://chatgpt.com/#settings/Security` when
      `developerModeEnabled` is true. If create/delete then says developer
@@ -760,7 +765,7 @@ the previous public address is gone. Doctor already started a new one.
 | --- | --- |
 | Bridge not running | `c2c start` (doctor does this automatically) |
 | Tunnel dead / URL unreachable / 全关掉后连接失效 | `c2c doctor` → if `namedRepair.needed`, login to Cloudflare and doctor again (do not Delete). If `chatgptRepair.needed`, tell the user the message, then **Delete** THIS workspace's connector only (`connectorName`) and create it again. Never Reconnect. After recreate, re-check `workspace_info` in the saved chat; if it still fails, new chat in the same Project (or long-chat switch) + HANDOFF. |
-| Collection page shows only Retry | Same iab tab: Retry once, then open the last working chat and click its Project link. Do not write INIT/EXECUTED waiting checkpoints until the message is visible. |
+| Collection page shows only Retry | Same selected ChatGPT browser tab: Retry once, then open the last working chat and click its Project link. Do not write INIT/EXECUTED waiting checkpoints until the message is visible. |
 | ChatGPT says tool call failed / 401 | token expired or revoked → re-pair (new pairing code + authorize) |
 | Pairing code rejected/expired | `c2c pair --json` for a fresh code |
 | Same explicit ChatGPT setup/reconnect browser configuration step fails twice after repair | Stop automating ChatGPT settings and use **Guided manual ChatGPT setup fallback**. Do not count browser/js timeout, loading/generating, or login/2FA waiting as failures. |
