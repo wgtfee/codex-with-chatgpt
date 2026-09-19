@@ -1,0 +1,20 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "codex-with-chatgpt",
+  "version": "0.2.0",
+  "description": "Use ChatGPT as a planning and review layer while Codex owns the current workspace and execution lifecycle.",
+  "repository": "https://github.com/wgtfee/codex-with-chatgpt",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "chatgpt",
+    "workspace",
+    "review"
+  ],
+  "skills": "./skills/",
+  "extensions": {
+    "com.openai": {
+      "hooks": "./hooks/hooks.json"
+    }
+  }
+}
