@@ -109,14 +109,32 @@ function redact(text) {
     .replace(/(authorization\s*:\s*bearer\s+)[^\s"']+/gi, "$1[REDACTED]")
     .replace(/(bearer\s+)[A-Za-z0-9._~+\/-]{12,}/gi, "$1[REDACTED]")
     .replace(/([?&](?:token|access_token|refresh_token|api_key|key)=)[^&\s]+/gi, "$1[REDACTED]")
+    .replace(/\b((?:[A-Z0-9_]*_)?(?:TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|ACCESS_KEY|SECRET_KEY))\s*=\s*(?:"[^"]*"|'[^']*'|[^\s]+)/gi, "$1=[REDACTED]")
+    .replace(/(--(?:token|api-key|password|secret)\s+)(?:"[^"]*"|'[^']*'|[^\s]+)/gi, "$1[REDACTED]")
+    .replace(/\bsk-[A-Za-z0-9_-]{12,}\b/g, "[REDACTED]")
     .replace(/\b[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}\b/g, "[PAIRING_CODE]");
+}
+
+function isSensitivePath(value) {
+  const rel = String(value || "").replace(/\\/g, "/").replace(/^\.\//, "");
+  const lower = rel.toLowerCase();
+  const parts = lower.split("/");
+  const base = parts[parts.length - 1] || "";
+  if (base === ".env.example") return false;
+  if (base === ".env" || base.startsWith(".env.")) return true;
+  if (/\.(?:pem|key|p12|pfx|jks|keystore|keychain|keychain-db)$/.test(base)) return true;
+  if (/^id_(?:rsa|ed25519|ecdsa|dsa)(?:\..+)?$/.test(base)) return true;
+  if (parts.some((part) => [".ssh", ".aws", ".gnupg", ".cloudflared"].includes(part))) return true;
+  if ([".npmrc", ".netrc", "_netrc", ".git-credentials", "credentials.json", "secrets.json", "cookies.sqlite", "cookies"].includes(base)) return true;
+  if (/^service-account.*\.json$/.test(base) || base.startsWith(".c2c-secrets")) return true;
+  return false;
 }
 
 export function changedFilesFromPatch(command) {
   const files = [];
   for (const line of String(command || "").split(/\r?\n/)) {
     const match = line.match(/^\*\*\* (?:Update|Add|Delete) File: (.+)$/);
-    if (match) files.push(match[1].trim());
+    if (match && !isSensitivePath(match[1].trim())) files.push(match[1].trim());
   }
   return [...new Set(files)].slice(0, 100);
 }
