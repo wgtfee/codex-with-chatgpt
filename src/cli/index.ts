@@ -157,6 +157,15 @@ function tunnelChoicePayload(workspace: Workspace, zoneHint?: string): Record<st
 function trySandboxAllow():
   | { ok: true; added: boolean; alreadyAllowed: boolean; stateDir: string; configPath: string }
   | { ok: false; added: false; alreadyAllowed: false; error: string } {
+  if (process.env.C2C_PLUGIN_MODE === "1") {
+    return {
+      ok: true,
+      added: false,
+      alreadyAllowed: true,
+      stateDir: getStateDir(),
+      configPath: "PLUGIN_DATA",
+    };
+  }
   try {
     const result = ensureSandboxAllowlist();
     return { ok: true, ...result };
