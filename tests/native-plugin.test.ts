@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 import { Workspace } from "../src/workspace/manager.js";
 import { readExecutionRecords } from "../src/execution/records.js";
@@ -118,6 +119,50 @@ describe("native Codex workspace plugin hooks", () => {
     const saved = fs.readFileSync(eventFile, "utf8");
     expect(saved).not.toContain("supersecret123456789");
     expect(saved).toContain("[REDACTED]");
+  });
+
+
+  it("uses a cross-platform wrapper and keeps sandbox configuration untouched in plugin mode", () => {
+    const state = makeTmpDir("native-wrapper-state");
+    dirs.push(state);
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        path.join(process.cwd(), "scripts", "c2c-native.mjs"),
+        "--state-dir",
+        state,
+        "sandbox-allow",
+        "--json",
+      ],
+      { cwd: process.cwd(), encoding: "utf8" }
+    );
+
+    expect(result.status).toBe(0);
+    const payload = JSON.parse(result.stdout.trim());
+    expect(payload).toMatchObject({
+      ok: true,
+      added: false,
+      alreadyAllowed: true,
+      configPath: "PLUGIN_DATA",
+    });
+    expect(payload.stateDir).toBe(path.resolve(state));
+  });
+
+  it("ships valid plugin manifests whose hook and skill paths exist", () => {
+    const root = process.cwd();
+    const portable = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
+    const compat = JSON.parse(fs.readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"));
+    const hooks = JSON.parse(fs.readFileSync(path.join(root, "hooks", "hooks.json"), "utf8"));
+
+    expect(portable.name).toBe("codex-with-chatgpt");
+    expect(portable.skills).toBe("./skills/");
+    expect(portable.extensions?.["com.openai"]?.hooks).toBe("./hooks/hooks.json");
+    expect(compat.hooks).toBe("./hooks/hooks.json");
+    expect(fs.existsSync(path.join(root, "skills", "codex-with-chatgpt", "SKILL.md"))).toBe(true);
+    expect(hooks.hooks.SessionStart[0].hooks[0].command).toContain("${PLUGIN_ROOT}");
+    expect(fs.existsSync(path.join(root, "hooks", "session-start.mjs"))).toBe(true);
+    expect(fs.existsSync(path.join(root, "hooks", "post-tool-use.mjs"))).toBe(true);
   });
 
   it("extracts changed files without storing patch bodies", () => {
