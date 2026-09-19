@@ -84,10 +84,10 @@ export function captureSession(event, dataDir) {
     workspaceKey: paths.workspaceKey,
     workspaceRoot: root,
     workspaceName: path.basename(root),
-    source: event.source || null,
-    model: event.model || null,
-    permissionMode: event.permission_mode || null,
-    transcriptPath: event.transcript_path || null,
+    source: event.source ?? previous?.source ?? null,
+    model: event.model ?? previous?.model ?? null,
+    permissionMode: event.permission_mode ?? previous?.permissionMode ?? null,
+    transcriptPath: event.transcript_path ?? previous?.transcriptPath ?? null,
     startedAt: previous?.startedAt || now,
     lastSeenAt: now
   };
