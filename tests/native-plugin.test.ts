@@ -180,6 +180,85 @@ describe("native Codex workspace plugin hooks", () => {
     expect(fs.existsSync(path.join(root, "hooks", "post-tool-use.mjs"))).toBe(true);
   });
 
+  it("runs the Codex lifecycle end-to-end against the current cwd", () => {
+    const root = makeTmpDir("native-e2e-workspace");
+    const state = makeTmpDir("native-e2e-state");
+    dirs.push(root, state);
+    const pluginRoot = process.cwd();
+    const wrapper = path.join(pluginRoot, "scripts", "c2c-native.mjs");
+    const hookEnv = {
+      ...process.env,
+      PLUGIN_ROOT: pluginRoot,
+      PLUGIN_DATA: state,
+    };
+
+    try {
+      const started = spawnSync(process.execPath, [path.join(pluginRoot, "hooks", "session-start.mjs")], {
+        cwd: root,
+        env: hookEnv,
+        input: JSON.stringify({
+          session_id: "thr_e2e_native",
+          cwd: root,
+          hook_event_name: "SessionStart",
+          source: "startup",
+          model: "gpt-5.6-sol",
+          permission_mode: "default",
+        }),
+        encoding: "utf8",
+        timeout: 20_000,
+      });
+      expect(started.status).toBe(0);
+      const hookOutput = JSON.parse(started.stdout.trim());
+      expect(hookOutput.hookSpecificOutput.additionalContext).toContain("Authoritative workspace: " + root);
+      expect(hookOutput.hookSpecificOutput.additionalContext).toContain("local bridge is ready");
+
+      const status = spawnSync(
+        process.execPath,
+        [wrapper, "--state-dir", state, "status", "--json"],
+        { cwd: root, encoding: "utf8", timeout: 15_000 }
+      );
+      expect(status.status).toBe(0);
+      expect(JSON.parse(status.stdout.trim())).toMatchObject({
+        ok: true,
+        running: true,
+        workspaceRoot: root,
+      });
+
+      const posted = spawnSync(process.execPath, [path.join(pluginRoot, "hooks", "post-tool-use.mjs")], {
+        cwd: root,
+        env: hookEnv,
+        input: JSON.stringify({
+          session_id: "thr_e2e_native",
+          turn_id: "turn_e2e",
+          cwd: root,
+          hook_event_name: "PostToolUse",
+          tool_name: "Bash",
+          tool_use_id: "tool_e2e",
+          tool_input: { command: "pnpm test" },
+          tool_response: { exit_code: 0 },
+        }),
+        encoding: "utf8",
+        timeout: 10_000,
+      });
+      expect(posted.status).toBe(0);
+
+      process.env.C2C_STATE_DIR = state;
+      const workspace = new Workspace(root);
+      expect(readExecutionRecords(workspace.id, 5).at(-1)).toMatchObject({
+        source: "hook",
+        kind: "test",
+        exitStatus: "ok",
+        sessionId: "thr_e2e_native",
+      });
+    } finally {
+      spawnSync(process.execPath, [wrapper, "--state-dir", state, "stop"], {
+        cwd: root,
+        encoding: "utf8",
+        timeout: 15_000,
+      });
+    }
+  });
+
   it("extracts changed files without storing patch bodies", () => {
     expect(
       changedFilesFromPatch(
