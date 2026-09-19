@@ -119,6 +119,21 @@ describe("native Codex workspace plugin hooks", () => {
     const saved = fs.readFileSync(eventFile, "utf8");
     expect(saved).not.toContain("supersecret123456789");
     expect(saved).toContain("[REDACTED]");
+
+    recordToolEvent(
+      {
+        session_id: "thr_secret",
+        cwd: root,
+        tool_name: "Bash",
+        tool_use_id: "tool_secret_2",
+        tool_input: { command: "OPENAI_API_KEY=sk-supersecret987654321 node app.js --token anotherSecret123456" },
+        tool_response: { exit_code: 0 },
+      },
+      state
+    );
+    const savedAgain = fs.readFileSync(eventFile, "utf8");
+    expect(savedAgain).not.toContain("sk-supersecret987654321");
+    expect(savedAgain).not.toContain("anotherSecret123456");
   });
 
 
@@ -168,7 +183,7 @@ describe("native Codex workspace plugin hooks", () => {
   it("extracts changed files without storing patch bodies", () => {
     expect(
       changedFilesFromPatch(
-        "*** Begin Patch\n*** Update File: src/a.ts\n*** Add File: src/b.ts\n*** Delete File: old.txt\n*** End Patch"
+        "*** Begin Patch\n*** Update File: src/a.ts\n*** Add File: src/b.ts\n*** Delete File: old.txt\n*** Update File: .env\n*** Add File: secrets.json\n*** End Patch"
       )
     ).toEqual(["src/a.ts", "src/b.ts", "old.txt"]);
   });
