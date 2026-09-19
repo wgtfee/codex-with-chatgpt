@@ -1,0 +1,20 @@
+{
+  "name": "codex-with-chatgpt-dev",
+  "interface": {
+    "displayName": "Codex with ChatGPT"
+  },
+  "plugins": [
+    {
+      "name": "codex-with-chatgpt",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "interface": {
+        "displayName": "Codex with ChatGPT",
+        "description": "ChatGPT plans and reviews while Codex owns the active workspace."
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
