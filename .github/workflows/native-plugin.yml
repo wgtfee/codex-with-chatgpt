@@ -1,0 +1,52 @@
+name: Native plugin CI
+
+on:
+  push:
+    branches:
+      - feature/codex-native-workspace-plugin
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm build
+      - run: corepack pnpm test
+
+      - name: Assemble native plugin package
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="codex-with-chatgpt-native-plugin"
+          rm -rf "$PKG"
+          mkdir -p "$PKG"
+          cp -R .codex-plugin hooks skills dist bin scripts "$PKG/"
+          cp plugin.json package.json pnpm-lock.yaml pnpm-workspace.yaml LICENSE README.md README.zh-CN.md "$PKG/"
+          cp -R node_modules "$PKG/node_modules"
+          cd "$PKG"
+          corepack pnpm prune --prod
+          cd ..
+          test -f "$PKG/dist/cli/index.js"
+          test -f "$PKG/.codex-plugin/plugin.json"
+          test -f "$PKG/hooks/hooks.json"
+          test -d "$PKG/node_modules"
+
+      - name: Smoke packaged CLI
+        run: node codex-with-chatgpt-native-plugin/bin/c2c.js --help
+
+      - name: Upload installable native plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-with-chatgpt-native-plugin
+          path: codex-with-chatgpt-native-plugin/
+          if-no-files-found: error
+          retention-days: 30
